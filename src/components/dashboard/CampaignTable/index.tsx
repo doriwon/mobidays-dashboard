@@ -1,17 +1,18 @@
 "use client";
 
 import { useFilteredData } from "@/hooks/useFilteredData";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 type SortKey = "startDate" | "totalCost" | "ctr" | "cpc" | "roas";
+type SortDir = "asc" | "desc";
+
+const PAGE_SIZE = 10;
 
 export default function CampaignTable() {
     const { tableData } = useFilteredData();
+    const [page, setPage] = useState(1);
     const [search, setSearch] = useState("");
-    const [sort, setSort] = useState<{
-        key: "startDate" | "totalCost" | "ctr" | "cpc" | "roas";
-        dir: "asc" | "desc";
-    } | null>(null);
+    const [sort, setSort] = useState<{ key: SortKey; dir: SortDir } | null>(null);
 
     const searchedData = useMemo(() => {
         return tableData.filter((row) => (row.name ?? "").toLowerCase().includes(search.toLowerCase()));
@@ -32,11 +33,16 @@ export default function CampaignTable() {
         });
     }, [searchedData, sort]);
 
+    const totalCount = sortedData.length;
+    const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
+    const paginatedData = useMemo(() => sortedData.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE), [sortedData, page]);
+
     // 정렬 토글
     const handleSort = (key: SortKey) => {
         setSort((prev) =>
             prev?.key === key ? { key, dir: prev.dir === "asc" ? "desc" : "asc" } : { key, dir: "asc" },
         );
+        setPage(1);
     };
 
     // 정렬 아이콘 표시
@@ -44,6 +50,16 @@ export default function CampaignTable() {
         if (sort?.key !== key) return "↕";
         return sort.dir === "asc" ? "↑" : "↓";
     };
+
+    useEffect(() => {
+        setPage(1);
+    }, [search]);
+
+    useEffect(() => {
+        if (page > totalPages) {
+            setPage(totalPages);
+        }
+    }, [totalPages]);
 
     return (
         <section className="rounded-lg border p-4">
@@ -86,12 +102,12 @@ export default function CampaignTable() {
                 </thead>
 
                 <tbody>
-                    {sortedData.length === 0 ? (
+                    {paginatedData.length === 0 ? (
                         <tr>
                             <td colSpan={8}>데이터 없음</td>
                         </tr>
                     ) : (
-                        sortedData.map((row) => (
+                        paginatedData.map((row) => (
                             <tr key={row.id}>
                                 <td>{row.name ?? "-"}</td>
                                 <td>{row.status}</td>
@@ -108,6 +124,33 @@ export default function CampaignTable() {
                     )}
                 </tbody>
             </table>
+
+            {/* 페이지네이션 */}
+            <div className="flex items-center justify-center gap-2">
+                <button
+                    onClick={() => setPage((p) => Math.max(1, p - 1))}
+                    disabled={page === 1}
+                    className="rounded border px-3 py-1 text-sm disabled:opacity-40"
+                >
+                    이전
+                </button>
+                {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
+                    <button
+                        key={p}
+                        onClick={() => setPage(p)}
+                        className={`rounded border px-3 py-1 text-sm ${page === p ? "bg-blue-600 text-white" : ""}`}
+                    >
+                        {p}
+                    </button>
+                ))}
+                <button
+                    onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                    disabled={page === totalPages}
+                    className="rounded border px-3 py-1 text-sm disabled:opacity-40"
+                >
+                    다음
+                </button>
+            </div>
         </section>
     );
 }
