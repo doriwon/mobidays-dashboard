@@ -13,6 +13,7 @@ export default function CampaignTable() {
     const [page, setPage] = useState(1);
     const [search, setSearch] = useState("");
     const [sort, setSort] = useState<{ key: SortKey; dir: SortDir } | null>(null);
+    const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
     const searchedData = useMemo(() => {
         return tableData.filter((row) => (row.name ?? "").toLowerCase().includes(search.toLowerCase()));
@@ -51,9 +52,31 @@ export default function CampaignTable() {
         return sort.dir === "asc" ? "↑" : "↓";
     };
 
-    useEffect(() => {
+    // 검색 시 페이지 초기화
+    const handleSearch = (v: string) => {
+        setSearch(v);
         setPage(1);
-    }, [search]);
+    };
+
+    // 체크박스
+    const allChecked = paginatedData.length > 0 && paginatedData.every((r) => selectedIds.has(r.id));
+
+    const toggleAll = () => {
+        setSelectedIds((prev) => {
+            const next = new Set(prev);
+            if (allChecked) paginatedData.forEach((r) => next.delete(r.id));
+            else paginatedData.forEach((r) => next.add(r.id));
+            return next;
+        });
+    };
+
+    const toggleOne = (id: string) => {
+        setSelectedIds((prev) => {
+            const next = new Set(prev);
+            next.has(id) ? next.delete(id) : next.add(id);
+            return next;
+        });
+    };
 
     useEffect(() => {
         if (page > totalPages) {
@@ -68,12 +91,15 @@ export default function CampaignTable() {
                 type="text"
                 placeholder="캠페인명 검색"
                 value={search}
-                onChange={(e) => setSearch(e.target.value)}
+                onChange={(e) => handleSearch(e.target.value)}
                 className="border px-2 py-1 text-sm"
             />
             <table className="w-full text-sm">
                 <thead>
                     <tr>
+                        <th className="pb-2 pr-3">
+                            <input type="checkbox" checked={allChecked} onChange={toggleAll} />
+                        </th>
                         <th className="pb-2 pr-3">캠페인명</th>
                         <th className="pb-2 pr-3">상태</th>
                         <th className="pb-2 pr-3">매체</th>
@@ -104,21 +130,28 @@ export default function CampaignTable() {
                 <tbody>
                     {paginatedData.length === 0 ? (
                         <tr>
-                            <td colSpan={8}>데이터 없음</td>
+                            <td colSpan={9}>데이터 없음</td>
                         </tr>
                     ) : (
                         paginatedData.map((row) => (
                             <tr key={row.id}>
-                                <td>{row.name ?? "-"}</td>
-                                <td>{row.status}</td>
-                                <td>{row.platform}</td>
-                                <td>
+                                <td className="py-3 pr-3">
+                                    <input
+                                        type="checkbox"
+                                        checked={selectedIds.has(row.id)}
+                                        onChange={() => toggleOne(row.id)}
+                                    />
+                                </td>
+                                <td className="py-3 pr-3">{row.name ?? "-"}</td>
+                                <td className="py-3 pr-3">{row.status}</td>
+                                <td className="py-3 pr-3">{row.platform}</td>
+                                <td className="py-3 pr-3">
                                     {row.startDate} ~ {row.endDate ?? "-"}
                                 </td>
-                                <td>{row.totalCost}</td>
-                                <td>{row.ctr}</td>
-                                <td>{row.cpc}</td>
-                                <td>{row.roas}</td>
+                                <td className="py-3 pr-3">{row.totalCost}</td>
+                                <td className="py-3 pr-3">{row.ctr}</td>
+                                <td className="py-3 pr-3">{row.cpc}</td>
+                                <td className="py-3 pr-3">{row.roas}</td>
                             </tr>
                         ))
                     )}
