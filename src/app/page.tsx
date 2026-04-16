@@ -1,5 +1,6 @@
 "use client";
 
+import CampaignTable from "@/components/dashboard/CampaignTable";
 import GlobalFilter from "@/components/dashboard/GlobalFilter";
 import { useFilteredData } from "@/hooks/useFilteredData";
 
@@ -9,6 +10,7 @@ export default function DashboardPage() {
     return (
         <main className="p-6 space-y-6">
             <GlobalFilter />
+            <CampaignTable />
 
             <section className="rounded-lg border p-4">
                 <p>필터된 캠페인: {filteredCampaigns.length}개</p>
