@@ -2,18 +2,30 @@
 
 import { useFilteredData } from "@/hooks/useFilteredData";
 import { useEffect, useMemo, useState } from "react";
+import { Campaign } from "@/types";
+import { useQueryClient } from "@tanstack/react-query";
+import { CAMPAIGNS_KEY } from "@/hooks/useCampaigns";
 
 type SortKey = "startDate" | "totalCost" | "ctr" | "cpc" | "roas";
 type SortDir = "asc" | "desc";
+type Status = Campaign["status"];
 
 const PAGE_SIZE = 10;
+const STATUS_LABEL: Record<Status, string> = {
+    active: "진행중",
+    paused: "일시중지",
+    ended: "종료",
+};
 
 export default function CampaignTable() {
     const { tableData } = useFilteredData();
+    const queryClient = useQueryClient();
+
     const [page, setPage] = useState(1);
     const [search, setSearch] = useState("");
     const [sort, setSort] = useState<{ key: SortKey; dir: SortDir } | null>(null);
     const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+    const [bulkStatus, setBulkStatus] = useState<Status>("active");
 
     const searchedData = useMemo(() => {
         return tableData.filter((row) => (row.name ?? "").toLowerCase().includes(search.toLowerCase()));
@@ -44,6 +56,15 @@ export default function CampaignTable() {
             prev?.key === key ? { key, dir: prev.dir === "asc" ? "desc" : "asc" } : { key, dir: "asc" },
         );
         setPage(1);
+    };
+
+    // 일괄 상태변경 - React Query 캐시 직접 수정 → 즉시 반영
+    const handleBulkChange = () => {
+        if (selectedIds.size === 0) return;
+        queryClient.setQueryData<Campaign[]>(CAMPAIGNS_KEY, (old = []) =>
+            old.map((c) => (selectedIds.has(c.id) ? { ...c, status: bulkStatus } : c)),
+        );
+        setSelectedIds(new Set());
     };
 
     // 정렬 아이콘 표시
@@ -94,6 +115,32 @@ export default function CampaignTable() {
                 onChange={(e) => handleSearch(e.target.value)}
                 className="border px-2 py-1 text-sm"
             />
+            <span className="text-sm text-gray-500">
+                검색 결과 {totalCount}건 / 전체 {tableData.length}건
+            </span>
+
+            {/* 일괄 상태변경 */}
+            <div className="flex items-center gap-2">
+                <span className="text-sm text-gray-500">{selectedIds.size}개 선택</span>
+                <select
+                    value={bulkStatus}
+                    onChange={(e) => setBulkStatus(e.target.value as Status)}
+                    className="rounded border px-2 py-2 text-sm"
+                >
+                    <option value="active">진행중</option>
+                    <option value="paused">일시중지</option>
+                    <option value="ended">종료</option>
+                </select>
+                <button
+                    type="button"
+                    onClick={handleBulkChange}
+                    disabled={selectedIds.size === 0}
+                    className="rounded bg-blue-600 px-3 py-2 text-sm text-white disabled:opacity-40"
+                >
+                    상태 변경
+                </button>
+            </div>
+
             <table className="w-full text-sm">
                 <thead>
                     <tr>
@@ -143,7 +190,7 @@ export default function CampaignTable() {
                                     />
                                 </td>
                                 <td className="py-3 pr-3">{row.name ?? "-"}</td>
-                                <td className="py-3 pr-3">{row.status}</td>
+                                <td className="py-3 pr-3"> {STATUS_LABEL[row.status] ?? row.status}</td>
                                 <td className="py-3 pr-3">{row.platform}</td>
                                 <td className="py-3 pr-3">
                                     {row.startDate} ~ {row.endDate ?? "-"}
