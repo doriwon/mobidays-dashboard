@@ -2,6 +2,9 @@
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
+import { useQueryClient } from "@tanstack/react-query";
+import { CAMPAIGNS_KEY } from "@/hooks/useCampaigns";
+import { Campaign } from "@/types";
 
 // 날짜 유효성 검사 함수
 const isValidDate = (str: string) => {
@@ -45,6 +48,8 @@ interface Props {
 }
 
 export default function CampaignModal({ open, onClose }: Props) {
+    const queryClient = useQueryClient();
+
     const {
         register,
         handleSubmit,
@@ -59,8 +64,19 @@ export default function CampaignModal({ open, onClose }: Props) {
         onClose();
     };
 
-    const onSubmit = (values: FormValues) => {
-        console.log("폼 데이터", values);
+    const onSubmit = async (values: FormValues) => {
+        const newCampaign: Campaign = {
+            id: crypto.randomUUID(),
+            name: values.name,
+            platform: values.platform,
+            status: "active",
+            budget: values.budget,
+            startDate: values.startDate,
+            endDate: values.endDate,
+        };
+
+        queryClient.setQueryData<Campaign[]>(CAMPAIGNS_KEY, (old = []) => [...old, newCampaign]);
+        handleClose();
     };
 
     if (!open) return null;
@@ -138,9 +154,10 @@ export default function CampaignModal({ open, onClose }: Props) {
                         </button>
                         <button
                             type="submit"
+                            disabled={isSubmitting}
                             className="rounded bg-blue-600 px-4 py-2 text-sm text-white disabled:opacity-50"
                         >
-                            등록
+                            {isSubmitting ? "등록 중..." : "등록"}
                         </button>
                     </div>
                 </form>
