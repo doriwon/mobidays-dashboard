@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { useFilterStore } from "@/store/filterStore";
 
 const PLATFORM_OPTIONS = ["Google", "Meta", "Naver"] as const;
@@ -11,9 +12,50 @@ const STATUS_LABEL: Record<(typeof STATUS_OPTIONS)[number], string> = {
     ended: "종료",
 };
 
+const isValidDate = (str: string): boolean => {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(str)) return false;
+    return !isNaN(new Date(str).getTime());
+};
+
+// 연도가 4자리 초과인지 체크
+const hasInvalidYear = (str: string): boolean => {
+    const year = str.split("-")[0];
+    return year.length > 4;
+};
+
 export default function GlobalFilter() {
     const { dateRange, platforms, statuses, setDateRange, togglePlatform, toggleStatus, resetFilter } =
         useFilterStore();
+
+    const [localStart, setLocalStart] = useState(dateRange.start);
+    const [localEnd, setLocalEnd] = useState(dateRange.end);
+
+    useEffect(() => {
+        setLocalStart(dateRange.start);
+        setLocalEnd(dateRange.end);
+    }, [dateRange.start, dateRange.end]);
+
+    const handleDateChange = (value: string, setter: (v: string) => void) => {
+        if (!value) return;
+        if (hasInvalidYear(value)) return;
+        setter(value);
+    };
+
+    const handleStartBlur = () => {
+        if (isValidDate(localStart)) {
+            setDateRange({ start: localStart, end: dateRange.end });
+        } else {
+            setLocalStart(dateRange.start);
+        }
+    };
+
+    const handleEndBlur = () => {
+        if (isValidDate(localEnd)) {
+            setDateRange({ start: dateRange.start, end: localEnd });
+        } else {
+            setLocalEnd(dateRange.end);
+        }
+    };
 
     return (
         <section className="rounded-lg border p-4 space-y-4">
@@ -28,28 +70,18 @@ export default function GlobalFilter() {
                     <div className="flex items-center gap-2">
                         <input
                             type="date"
-                            value={dateRange.start}
-                            max={dateRange.end}
-                            onChange={(e) =>
-                                setDateRange({
-                                    start: e.target.value,
-                                    end: dateRange.end,
-                                })
-                            }
-                            className="rounded border px-3 py-2 text-sm"
+                            value={localStart}
+                            onChange={(e) => handleDateChange(e.target.value, setLocalStart)}
+                            onBlur={handleStartBlur}
+                            className="rounded border px-3 py-2 text-sm w-full"
                         />
-                        <span className="text-sm text-gray-500">~</span>
+                        <span className="text-sm text-gray-500 flex-shrink-0">~</span>
                         <input
                             type="date"
-                            value={dateRange.end}
-                            min={dateRange.start}
-                            onChange={(e) =>
-                                setDateRange({
-                                    start: dateRange.start,
-                                    end: e.target.value,
-                                })
-                            }
-                            className="rounded border px-3 py-2 text-sm"
+                            value={localEnd}
+                            onChange={(e) => handleDateChange(e.target.value, setLocalEnd)}
+                            onBlur={handleEndBlur}
+                            className="rounded border px-3 py-2 text-sm w-full"
                         />
                     </div>
                 </div>
@@ -58,11 +90,12 @@ export default function GlobalFilter() {
                     <p className="text-sm font-medium">상태</p>
                     <div className="flex flex-wrap gap-3">
                         {STATUS_OPTIONS.map((status) => (
-                            <label key={status} className="flex items-center gap-2 text-sm">
+                            <label key={status} className="flex items-center gap-2 text-sm cursor-pointer">
                                 <input
                                     type="checkbox"
                                     checked={statuses.includes(status)}
                                     onChange={() => toggleStatus(status)}
+                                    className="cursor-pointer"
                                 />
                                 <span>{STATUS_LABEL[status]}</span>
                             </label>
@@ -74,11 +107,12 @@ export default function GlobalFilter() {
                     <p className="text-sm font-medium">매체</p>
                     <div className="flex flex-wrap gap-3">
                         {PLATFORM_OPTIONS.map((platform) => (
-                            <label key={platform} className="flex items-center gap-2 text-sm">
+                            <label key={platform} className="flex items-center gap-2 text-sm cursor-pointer">
                                 <input
                                     type="checkbox"
                                     checked={platforms.includes(platform)}
                                     onChange={() => togglePlatform(platform)}
+                                    className="cursor-pointer"
                                 />
                                 <span>{platform}</span>
                             </label>
