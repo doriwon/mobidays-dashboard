@@ -5,6 +5,8 @@ import CampaignTable from "@/components/dashboard/CampaignTable";
 import DailyTrendChart from "@/components/dashboard/DailyTrendChart";
 import GlobalFilter from "@/components/dashboard/GlobalFilter";
 import CampaignModal from "@/components/dashboard/CampaignModal";
+import PlatformChart from "@/components/dashboard/PlatformChart";
+import CampaignRanking from "@/components/dashboard/CampaignRanking";
 
 export default function DashboardPage() {
     const [modalOpen, setModalOpen] = useState(false);
@@ -20,6 +22,11 @@ export default function DashboardPage() {
                 >
                     캠페인 등록
                 </button>
+            </div>
+
+            <div className="grid gap-6 md:grid-cols-2">
+                <PlatformChart />
+                <CampaignRanking />
             </div>
 
             <GlobalFilter />
